@@ -48,7 +48,7 @@ for i, row in df.iterrows():
     # Durata target 
     target_duration = dur_sano + diff
     if target_duration <= 0:
-        print(f"⚠️ Durata target <= 0 per {name}, salto")
+        print(f"Durata target <= 0 per {name}, salto")
         continue
 
     # Fattore di stretching
@@ -90,4 +90,4 @@ for i, row in df.iterrows():
 # Report finale
 report_file = os.path.join(os.path.dirname(output_folder), "report_durate_cleese.xlsx")
 pd.DataFrame(report).to_excel(report_file, index=False)
-print("\n📁 Report salvato in:", report_file)
+print("\n Report salvato in:", report_file)
