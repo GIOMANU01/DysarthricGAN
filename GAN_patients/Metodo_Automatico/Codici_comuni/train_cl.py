@@ -25,20 +25,20 @@ def log_mel_to_mfcc(log_mel_tensor, target_mfcc_dim=12):
     Output: [B, C, target_mfcc_dim, T] -> [B, 1, 12, T]
     """
     
-    # Rimuovi dimensione canale se è 1, e sposta sul CPU per l'operazione numpy/scipy
+    # Rimuove dimensione canale se è 1, e sposta sul CPU per l'operazione numpy/scipy
     # input_data: [B, 80, T]
     input_data = log_mel_tensor.squeeze(1).detach().cpu().numpy() 
 
-    # 1. Applicazione DCT Type-II
+    # Applicazione DCT Type-II
     # Applica la DCT lungo l'asse delle Mel-Features (asse 1)
     # output_dct: [B, 80, T]
     mfcc_np = dct(input_data, type=2, axis=1, norm='ortho')
 
-    # 2. Selezione dei primi coefficienti
+    # Selezione dei primi coefficienti
     # mfcc_np_reduced: [B, 12, T]
     mfcc_np_reduced = mfcc_np[:, :target_mfcc_dim, :] 
 
-    # 3. Ritorna a tensor e ripristina dimensione canale
+    # Ritorna a tensor e ripristina dimensione canale
     # mfcc_tensor: [B, 1, 12, T]. Manteniamo il batch e il canale.
     mfcc_tensor = torch.from_numpy(mfcc_np_reduced).float().unsqueeze(1)
 
@@ -53,17 +53,17 @@ def reduce_time_dimension(mfcc_tensor):
     Output: [B * TARGET_TIME_LENGTH, Features] -> [B * 89, 12] (trasposto per la PCA/Centroidi).
     """
     
-    # 1. Preparazione
+    # Preparazione
     # Rimuovi la dimensione canale (C=1)
     # data_t: [B, Features, Time] -> [B, 12, T]
     data_t = mfcc_tensor.squeeze(1) 
     
-    # 2. Adaptive Pooling
+    # Adaptive Pooling
     # Applica il pooling su tutti i batch contemporaneamente.
     # pooled_data: [B, Features, TARGET_TIME_LENGTH] -> [B, 12, 89]
     pooled_data = F.adaptive_avg_pool1d(data_t, output_size=TARGET_TIME_LENGTH)
     
-    # 3. Trasformazione e Riorganizzazione per il Centroid Embedding
+    # Trasformazione e Riorganizzazione per il Centroid Embedding
     # Vogliamo [B * 89, 12] (Frame, Feature)
     
     # pooled_data trasposto: [B, TARGET_TIME_LENGTH, Features] -> [B, 89, 12]
@@ -82,9 +82,9 @@ def log_spec(writer, img, label, epoch):
     """
     Log MELSpectrograms as images into tensorboard
     """
-    spec_np = img.detach().cpu().numpy() # detach from gradient chain, move to cpu and transform to ndarray
-    spec_np = (spec_np - spec_np.min()) / (spec_np.max() - spec_np.min() + 1e-8) # scaling, requested by matplotlib
-    spec_np = np.flipud(spec_np) # put origin at lower
+    spec_np = img.detach().cpu().numpy() 
+    spec_np = (spec_np - spec_np.min()) / (spec_np.max() - spec_np.min() + 1e-8) # scaling
+    spec_np = np.flipud(spec_np) 
     colormap = matplotlib.colormaps['magma']
     spec_color = colormap(spec_np)[..., :3]  # shape [H, W, 3], RGB
     spec_tensor = torch.tensor(spec_color).permute(2, 0, 1)
@@ -109,15 +109,13 @@ def train_dcgan(
         writer = None
     ):
 
-    # img_path = os.path.join(result_path, "generated_images")
-    # os.makedirs(img_path, exist_ok=True)
+
     tensor_path = os.path.join(result_path, "generated_tensors")
     os.makedirs(tensor_path, exist_ok=True)
     checkpoint_path = os.path.join(result_path, "best_generator.pth")
 
     criterion = torch.nn.BCEWithLogitsLoss()
     criterion_2 = LogSpectralConvLoss().to(device)
-    # mse_loss = torch.nn.MSELoss()
     optimizerD = torch.optim.Adam(netD.parameters(), lr=lr_d, betas=(beta1, 0.999))
     optimizerG = torch.optim.Adam(netG.parameters(), lr=lr_g, betas=(beta1, 0.999))
 
@@ -138,8 +136,6 @@ def train_dcgan(
 
     early_stop = False
 
-    # best_distance = 1000.0
-    # best_diff = 1000.0
     best_d_all = 1000.0
     diff_best_d_all = 1000.0
 
@@ -149,16 +145,15 @@ def train_dcgan(
 
 
     # Disabilita il calcolo del gradiente per questa fase di pre-calcolo
-    # Se il tuo train_loader ha tutti i 760 campioni
     with torch.no_grad(): 
         print(">> Calcolo dei Centroidi Statici (Sano Input e Disartrico Target)...")
         for batch_sano, batch_disartrico, batch_sano_in in train_loader:
             
-            # 1. Sposta i dati sul device (CPU o GPU)
+            # Sposta i dati sul device (CPU o GPU)
             batch_disartrico = batch_disartrico.to(device)
             batch_sano_in = batch_sano_in.to(device)
 
-            # 2. Trasformazione MFCC e Riduzione Temporale
+            # Trasformazione MFCC e Riduzione Temporale
             # Sano Input
             mfcc_sano_in = log_mel_to_mfcc(batch_sano_in, target_mfcc_dim=TARGET_MFCC_DIM)
             reduced_sano_in = reduce_time_dimension(mfcc_sano_in)
@@ -169,7 +164,7 @@ def train_dcgan(
             reduced_dis = reduce_time_dimension(mfcc_dis)
             output_1.append(reduced_dis)
 
-    # 3. Aggrega e Calcola i Centroidi Finali Fissi
+    # Aggrega e Calcola i Centroidi Finali Fissi
     tot_output_0 = torch.cat(output_0, dim=0)
     tot_output_1 = torch.cat(output_1, dim=0)
 
@@ -197,18 +192,15 @@ def train_dcgan(
     del output_0, output_1, tot_output_0, tot_output_1, df_sano, df_dis, X_0, X_1
     print(">> Centroidi Statici Calcolati con Successo.")
 
-
-    # === NUOVO BLOCCO: Estrazione di UN SINGOLO campione fisso ===
-    # === NUOVO BLOCCO: Estrazione di 5 campioni fissi per il logging e il salvataggio ===
     try:
         # Estrae un batch (che DEVE contenere almeno 5 campioni, altrimenti riduci il numero)
         batch_sano_fixed, batch_disartrico_fixed, _ = next(iter(train_loader))
         
-        # 1. Seleziona i PRIMI 5 campioni
+        # Seleziona i PRIMI 5 campioni
         fixed_sano_input_set = batch_sano_fixed[:5].float().to(device) # [5, 1, 80, T]
         fixed_dis_target_set = batch_disartrico_fixed[:5].float().to(device) # [5, 1, 80, T]
         
-        # 2. Definisci il singolo campione per il LOGGING su TensorBoard
+        # Definisce il singolo campione per il LOGGING su TensorBoard
         fixed_sano = fixed_sano_input_set[0].unsqueeze(0) # [1, 1, 80, T]
         fixed_disartrico = fixed_dis_target_set[0].unsqueeze(0) # [1, 1, 80, T]
         
@@ -216,8 +208,7 @@ def train_dcgan(
         log_spec(writer, img=fixed_sano[0,0], label='Input_MELSpec_Fixed', epoch=0) 
         log_spec(writer, img=fixed_disartrico[0,0], label='Target_MELSpec_Fixed', epoch=0)
         
-        # 3. SALVA I 5 INPUT SANI E I 5 TARGET DISARTRICI NELLA CARTELLA DEI TENSORI
-        # Questo è importante per avere il confronto offline!
+        #  SALVA I 5 INPUT SANI E I 5 TARGET DISARTRICI NELLA CARTELLA DEI TENSORI
         fixed_path = os.path.join(tensor_path, 'fixed_samples')
         os.makedirs(fixed_path, exist_ok=True)
         
@@ -245,7 +236,6 @@ def train_dcgan(
         output_2 = []
 
         for i, (batch_sano, batch_disartrico, batch_sano_in) in enumerate(train_loader):
-            # step_count += 1
             batch_sano = batch_sano.to(device)
             batch_disartrico = batch_disartrico.to(device)
             batch_sano_in = batch_sano_in.to(device)
@@ -255,26 +245,22 @@ def train_dcgan(
 
             # DISCRIMINATORE
             label_real = torch.full((batch_size,), 0.9, dtype=torch.float, device=device)  # label smoothing
-            label_fake = torch.full((batch_size,), 0.1, dtype=torch.float, device=device)
-
-            # out_real = netD(batch_disartrico)
             out_real = netD(torch.cat((batch_sano, batch_disartrico), dim=1))
             out_real = out_real.view(-1) # i disartrici reali vengono passati al D
             loss_real = criterion(out_real, label_real) # calcolo loss dei disartrici reali con la label (1)
-
+            
+            label_fake = torch.full((batch_size,), 0.1, dtype=torch.float, device=device)
             fake_data = netG(batch_sano) # i sani vengono passati al G per generare i disartrici fake
-            # out_fake = netD(fake_data.detach())
             out_fake = netD(torch.cat((batch_sano, fake_data.detach()), dim=1))
             out_fake = out_fake.view(-1) # i disartrici fake generati vengono passati al D
             loss_fake = criterion(out_fake, label_fake) # calcolo loss dei disartrici fake con la label (0)
 
-            # Accumula loss (non dividere arbitrariamente)
+            # Accumulo loss 
             loss_D_batch = (loss_real + loss_fake) * 0.5
 
-            if i % update_d_every == 0: # update discriminator every "update_d_every" iterations
+            if i % update_d_every == 0: # update discriminatore ogni "update_d_every" iterationi
                 loss_D_batch.backward()
-                # if grad_clip is not None:
-                #     torch.nn.utils.clip_grad_norm_(netD.parameters(), grad_clip)
+
                 optimizerD.step()
 
             running_loss_D += loss_D_batch.item()
@@ -284,7 +270,6 @@ def train_dcgan(
             # GENERATORE
             optimizerG.zero_grad()
             label_gen = torch.full((batch_size,), 0.9, dtype=torch.float, device=device) 
-            # out_gen = netD(fake_data)
             out_gen = netD(torch.cat((batch_sano, fake_data), dim=1))
             out_gen = out_gen.view(-1) # passa i disartrici fake generati al D
             adv_loss = criterion(out_gen, label_gen) #applica la label (1) per ingannare il D
@@ -304,7 +289,6 @@ def train_dcgan(
 
             running_loss_G += loss_G.item()
             G_bce_loss += adv_loss.item()
-            # G_fm_loss += fm_loss
             G_l1_loss += l1_loss.item()
             G_sc_loss += sc_loss.item()
             
@@ -328,9 +312,9 @@ def train_dcgan(
         writer.add_scalar('G_L1_LOSS',            (G_l1_loss/len(train_loader)), epoch)
         writer.add_scalar('G_SC_LOSS',            (G_sc_loss/len(train_loader)), epoch)
 
-        current_lr_d = optimizerD.param_groups[0]['lr']  # prendi il learning rate del primo param_group
+        current_lr_d = optimizerD.param_groups[0]['lr']  # prende il learning rate del primo param_group
         writer.add_scalar('Learning_Rate_D', current_lr_d, epoch)
-        current_lr_g = optimizerG.param_groups[0]['lr']  # prendi il learning rate del primo param_group   
+        current_lr_g = optimizerG.param_groups[0]['lr']  # prende il learning rate del primo param_group   
         writer.add_scalar('Learning_Rate_G', current_lr_g, epoch)
 
 
@@ -338,7 +322,6 @@ def train_dcgan(
         X_2 = tot_output_2.cpu().numpy() # [N*89, 12]
 
         del tot_output_2
-        # Assumi che le colonne del DataFrame siano coerenti con la tua implementazione:
         mfcc_dim = X_2.shape[1] 
         mfcc_cols = [f'MFCC{i}' for i in range(1, mfcc_dim + 1)]
         
@@ -362,7 +345,7 @@ def train_dcgan(
         del X_2, df_gen
 
 
-        # === LOGGING TENSORBOARD DELLE METRICHE DEI CENTROIDI ===
+        # LOGGING TENSORBOARD DELLE METRICHE DEI CENTROIDI
         writer.add_scalar('T_Metrics/D1 (gen-dis)', distance_to_target, epoch) # Base
         writer.add_scalar('T_Metrics/Centroid_Isosceles_Diff', diff, epoch)
         writer.add_scalar('T_Metrics/D2 (gen-sano)', distance_from_input, epoch)
@@ -381,7 +364,7 @@ def train_dcgan(
         
         
         
-        # === VALIDAZIONE ===
+        # VALIDAZIONE 
         
         # if val_loader is not None:
         #     netG.eval()
@@ -410,7 +393,7 @@ def train_dcgan(
         #                 l1_loss = (torch.abs(fake_val - val_dis) * mask).sum() / (mask.sum() + 1e-8)
         #             val_l1_loss += l1_loss.item()
 
-        #             # === TOTAL ===
+        #             # TOTAL 
         #             total_val_loss = adv_loss + lambda_sc * sc_loss
         #             val_loss += total_val_loss.item()
 
@@ -433,7 +416,7 @@ def train_dcgan(
         #             output_2.append(reduced_t_gen)
             
             
-        #     # Fai la media sulle dimensioni del dataset
+        #     # Fa la media sulle dimensioni del dataset
         #     n = len(val_loader.dataset)
         #     val_loss /= n
         #     val_losses.append(val_loss)
@@ -459,11 +442,11 @@ def train_dcgan(
         # if len(X.shape) == 3 and X.shape[1] == 1:
         #     X = X.squeeze(axis=1)
 
-        # # Usiamo la dimensione effettiva degli MFCC
+        # # la dimensione effettiva degli MFCC
         # mfcc_dim = X.shape[1] 
         # df_features = pd.DataFrame(X, columns=[f'MFCC{i}' for i in range(1, mfcc_dim + 1)])
 
-        # # Aggiungiamo le etichette, assicurandoci che siano convertite in int/float compatibili se necessario
+        # # Aggiunge le etichette, assicurando che siano convertite in int/float compatibili 
         # df_features['Target'] = all_labels.astype(int) 
 
         # # Calcolo dei Centroidi (Media) per ogni classe nello spazio a D dimensioni MFCC
@@ -491,7 +474,7 @@ def train_dcgan(
         # distance_native = np.linalg.norm(V_native)
 
         # diff = abs(distance_from_input - distance_native)
-        #  # === LOGGING TENSORBOARD DELLE METRICHE DEI CENTROIDI ===
+        #  # LOGGING TENSORBOARD DELLE METRICHE DEI CENTROIDI 
         # writer.add_scalar('Validation_Metrics/d1 (gen-dis)', distance_to_target, epoch) # Base
         # writer.add_scalar('Validation_Metrics/Centroid_Isosceles_Diff', diff, epoch)
         # writer.add_scalar('Validation_Metrics/d2 (gen-sano)', distance_from_input, epoch)
@@ -514,28 +497,25 @@ def train_dcgan(
        
 
         #writer.flush()  
-        # === LOGGING DELLO SPETTROGRAMMA GENERATO FISSO SU TENSORBOARD ===
+        # LOGGING DELLO SPETTROGRAMMA GENERATO FISSO SU TENSORBOARD
         if FIXED_SAMPLE_EXISTS:
             netG.eval()
             with torch.no_grad():
-                # 1. Genera il SINGOLO campione per TensorBoard
+                # Genera il SINGOLO campione per TensorBoard
                 fixed_fake = netG(fixed_sano) 
                 
-                # 2. Log del singolo campione generato
+                # Log del singolo campione generato
                 log_spec(writer, img=fixed_fake[0,0], label='Generated_MELSpec_Fixed', epoch=epoch)
                 writer.flush()
                 
-                # === SALVATAGGIO DEI 5 TENSOR GENERATI FISSI ===
+                # SALVATAGGIO DEI 5 TENSOR GENERATI FISSI 
                 if epoch % 15 == 0 or epoch==epoch_d_all:
                     
                     ex_generated = os.path.join(tensor_path, f'generated_melspec_{epoch}')
                     os.makedirs(ex_generated, exist_ok=True)
                     
-                    # Genera tutti e 5 i campioni in un colpo solo
-                    # Usiamo fixed_sano_input_set (i 5 input sani fissi)
                     fake_set = netG(fixed_sano_input_set) # Output [5, 1, 80, T]
                 
-                    # Salva ogni campione generato separatamente
                     for i in range(fake_set.size(0)):
                         torch.save(fake_set[i].detach().cpu().squeeze(), 
                                 os.path.join(ex_generated, f'generated_melspec_{i}.pth'))
@@ -543,9 +523,7 @@ def train_dcgan(
                     print(f'>> 5 Generated MELSpec saved (Fixed Set)')
 
         print(f"[Epoch {epoch+1}/{num_epochs}] Loss_D: {avg_loss_D:.4f} | Loss_G: {avg_loss_G:.4f} | D1: {distance_to_target:.4f} | Diff: {diff:.4f} ")
-        # if early_stop:                
-        #     break
-        
+
     writer.close()    
 
     
