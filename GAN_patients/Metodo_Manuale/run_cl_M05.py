@@ -100,12 +100,9 @@ def main():
         lambda_l1=lambda_l1,
         lambda_sc=lambda_sc,
         lambda_mr=lambda_mr,
-        # lambda_fm=lambda_fm,
-        # lambda_stft=lambda_stft,
         result_path=result_path,
         num_epochs=num_epochs,
         update_d_every=update_d_every,
-        # grad_clip=grad_clip
         writer=writer
     )
 
