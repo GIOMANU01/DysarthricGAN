@@ -38,6 +38,9 @@ print(f"Using device {device}")
 result_path = "/home/deepfake/DysarthricGAN/M05/OptunaResultsM05"
 os.makedirs(result_path, exist_ok=True)    
 
+dataset_path = "/home/deepfake/DysarthricGAN/M05/M05_MEL_SPEC"
+dataset = PairedMelSpectrogramDataset(dataset_path)
+
 total_size = len(dataset)
 # Calcola le dimensioni (90/5/5)
 test_size = int(0.05 * total_size)
