@@ -6,12 +6,9 @@ import logging
 import pandas as pd
 from torch.utils.data import DataLoader, random_split
 from utils_gan import PairedMelSpectrogramDataset
-from DCGAN_dys_V2 import DysarthricGAN
+from DCGAN_dys import DysarthricGAN
 from train_Audio_Q import train_dcgan
 from torch.utils.tensorboard import SummaryWriter
-# from torchsummary import summary
-# from DCGAN_dys import Generator
-
 
 
 def set_seed(seed=42):
@@ -104,12 +101,9 @@ def main():
         lambda_l1=lambda_l1,
         lambda_sc=lambda_sc,
         lambda_mr=lambda_mr,
-        # lambda_fm=lambda_fm,
-        # lambda_stft=lambda_stft,
         result_path=result_path,
         num_epochs=num_epochs,
         update_d_every=update_d_every,
-        # grad_clip=grad_clip
         writer=writer
     )
 
@@ -117,7 +111,7 @@ def main():
         f"[Best_epoch: {epoch_d_all} | distance: {best_d_all:.4f} | diff: {diff_best_d_all:.4f}"
     )
 
-     # === Log locale nel trial ===
+     # Log locale nel trial 
     with open(os.path.join(result_path, "result_log.txt"), "w") as f:
         f.write(log_line)   
 
