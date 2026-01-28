@@ -6,10 +6,10 @@ import logging
 import pandas as pd
 from torch.utils.data import DataLoader, random_split
 from utils_gan import PairedMelSpectrogramDataset
-from DCGAN_dys_V2 import DysarthricGAN
+from DCGAN_dys import DysarthricGAN
 from train_op import train_dcgan
 from torchsummary import summary
-from DCGAN_dys_V2 import Generator
+from DCGAN_dys import Generator
 import sys
 import optuna
 from datetime import datetime
@@ -34,12 +34,9 @@ in_channels = 1
 device = torch.device("cuda") if torch.cuda.is_available() else "cpu"
 print(f"Using device {device}")
 
-#Cartella principale per i risultati Optuna ===
+#Cartella principale per i risultati Optuna
 result_path = "/home/deepfake/DysarthricGAN/M05/OptunaResultsM05"
 os.makedirs(result_path, exist_ok=True)    
-
-dataset_path = "/home/deepfake/DysarthricGAN/M05/M05_MEL_SPEC"
-dataset = PairedMelSpectrogramDataset(dataset_path)
 
 total_size = len(dataset)
 # Calcola le dimensioni (90/5/5)
@@ -55,7 +52,7 @@ train_dataset, val_dataset, test_dataset = random_split(
     generator=generator
 )
 
-########per salvare train e val e sapere quali parole stanno in uno o nell'altro #############
+# per salvare train e val e sapere quali parole stanno in uno o nell'altro 
 train_indices = train_dataset.indices
 val_indices = val_dataset.indices
 test_indices = test_dataset.indices
@@ -119,12 +116,9 @@ def objective(trial):
     lr_g = trial.suggest_float("lr_g", 1e-5, 5e-2, log=True)
     lr_d = trial.suggest_float("lr_d", 1e-5, 5e-2, log=True)
     lambda_sc = trial.suggest_categorical("lambda_sc", [0.5, 1, 1.5, 2, 2.5, 3])
-    #lambda_l1 = trial.suggest_float("lambda_l1", 5.0, 30.0)
-    #lambda_fm = trial.suggest_float("lambda_fm", 10.0, 30.0)
-    #lambda_stft = trial.suggest_float("lambda_stft", 10.0, 30.0)
     update_d_every = trial.suggest_categorical("update_d_every", [5, 7, 9, 10, 11, 13, 15, 17, 19])
     dropout_p = trial.suggest_float("dropout", 0.3, 0.7, log=True)
-    # === Crea una cartella dedicata per questo trial ===
+    # Crea una cartella dedicata per questo trial 
     trial_dir = os.path.join(result_path, f"{trial.number + 1}")  # numerazione da 1
     os.makedirs(trial_dir, exist_ok=True)
     tb_log_dir = os.path.join(trial_dir, "tensorboard")
@@ -159,7 +153,7 @@ def objective(trial):
     
     best_param = (best_distance + best_diff) / 2
 
-    # === Log del trial ===
+    # Log del trial
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     log_line = (
         f"[{timestamp}] Trial {trial.number + 1} | Best_epoch: {best_epoch} | num_epoch: {num_epochs} | distance: {best_distance:.4f} | diff: {best_diff:.4f}"
@@ -175,8 +169,8 @@ def objective(trial):
         f" | update_d_every={update_d_every}\n"
     ) 
     
-    print(f"📉 [Trial {trial.number + 1}]  (Best epoch: {best_epoch})  distance: {best_distance:.2f}  diff: {best_diff:.2f}")
-    # === LOG: scrive risultati in un file generale e nel trial ===
+    print(f"[Trial {trial.number + 1}]  (Best epoch: {best_epoch})  distance: {best_distance:.2f}  diff: {best_diff:.2f}")
+    # LOG: scrive risultati in un file generale e nel trial 
     global_log_path = os.path.join(result_path, "best_param.txt")
     with open(global_log_path, "a") as f:
         f.write(log_line)
@@ -185,14 +179,14 @@ def objective(trial):
     with open(global_log_path_2, "a") as f:
         f.write(log_line_2)    
 
-     # === Log locale nel trial ===
+     # Log locale nel trial 
     with open(os.path.join(trial_dir, "trial_log.txt"), "w") as f:
         f.write(log_line)   
-        f.write(log_line_2)      
+        f.write(log_line_2)       
     
     
 
-    print(f"📝 Saved trial log → {trial_dir}")
+    print(f"Saved trial log → {trial_dir}")
 
 
     # Optuna cerca di minimizzare l’output dell’objective
@@ -202,14 +196,14 @@ def main():
     import argparse
     parser = argparse.ArgumentParser(description="Optuna hyperparameter tuning for DysarthricGAN")
     parser.add_argument("--n_trials", type=int, default=30, help="Numero di combinazioni (try) da testare")
-    parser.add_argument("--study_name", type=str, default="DysarthricGAN_M05_Optuna", help="Nome dello studio Optuna")
+    parser.add_argument("--study_name", type=str, default="DysarthricGAN_F02_Optuna", help="Nome dello studio Optuna")
     args = parser.parse_args()
 
-    # === Definisci database Optuna ===
+    # Definisci database Optuna
     db_path = os.path.join(result_path, f"{args.study_name}.db")
     storage = f"sqlite:///{db_path}"
 
-    # === Crea o ricarica lo studio ===
+    # Crea o ricarica lo studio 
     study = optuna.create_study(
         study_name=args.study_name,
         storage=storage,
@@ -217,23 +211,23 @@ def main():
         load_if_exists=True,
     )
 
-    print(f"🚀 Avvio studio Optuna: {args.study_name}")
-    print(f"📊 Risultati salvati in: {result_path}")
-    print(f"🎯 Numero di trial richiesti: {args.n_trials}\n")
+    print(f" Avvio studio Optuna: {args.study_name}")
+    print(f" Risultati salvati in: {result_path}")
+    print(f" Numero di trial richiesti: {args.n_trials}\n")
 
-    # === Lancia la ricerca ===
+    # Lancia la ricerca
     study.optimize(objective, n_trials=args.n_trials)
 
-    # === Mostra risultati migliori ===
+    # Mostra risultati migliori 
     best_trial = study.best_trial # Ottiene l'oggetto completo del miglior trial
 
-    # === Mostra risultati migliori ===
-    print("\n🏁 Migliori iperparametri trovati:")
+    # Mostra risultati migliori 
+    print("\n Migliori iperparametri trovati:")
     print(f"  Valore minimo (loss): {study.best_value:.6f}")
     for key, value in study.best_params.items():
         print(f"  {key}: {value}")
 
-    # === Salva un file riassuntivo ===
+    # Salva un file riassuntivo 
     summary_path = os.path.join(result_path, "optuna_best_trial.txt")
     with open(summary_path, "w") as f:
         f.write(f"Best trial ID: {best_trial.number + 1}\n")
@@ -247,4 +241,3 @@ def main():
 
 if __name__ == "__main__":
     main()    
-
