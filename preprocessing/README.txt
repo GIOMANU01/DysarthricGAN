@@ -27,10 +27,7 @@ c) applicare mfa_aligner.py che elimina i silenzi pre e post ( se sono rimasti d
 della parola detta dal sano e dal disartrico
 
 FASE 6 
-applicare WSOLA_Speed_alg.ipynb (ambiente python 3.10.9) per modificare la durata dei sani in modo che vengono allungati o accorciati alla durata dei disartrici 
-ci sono due modi per modificare la durata:
---- WSOLA permette di modificare la durata del sano senza modificarne il pitch
---- speed modifica la durata del sano modificanod anche il pitch
+applicare stretch_cllese.py per modificare la durata dei sani in modo che vengono allungati o accorciati alla durata dei disartrici 
 
 CLEESE implemente l'algoritmo WSOLA con prestazioni di stretching ottime
 per usare CLEESE i passaggi sono:
@@ -39,7 +36,7 @@ per usare CLEESE i passaggi sono:
 3) installare le librerie necessarie per far funzionare il codice che si vuole far girare usando cleese
 4) nel codice importare cleese cosi "import cleese_stim as cleese"
 5) import toml, from cleese_stim.engines.phase_vocoder.phase_vocoder import PhaseVocoder servono per fare time stretching dei file audio.
-6) dal https://github.com/neuro-team-femto/cleese.git scaricare il file docs/api/configs/cleese-phase-vocoder.toml 
+6) dal https://github.com/neuro-team-femto/cleese.git scaricare il file docs/api/configs/cleese-phase-vocoder.toml (presente anche in repository
 7) dentro tale file aggiungere param_ext = ".txt" dopo riga 16, 
    modificare num_files = 10 --> num_files = 1, 
    transf = ["stretch", "pitch", "eq", "gain"] -->  transf = ["stretch"]
