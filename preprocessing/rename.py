@@ -1,7 +1,7 @@
 import os
 
 # Percorso della cartella contenente i file
-cartella = "C:/Users/gioel/Desktop/patient_GAN_vad/patient_F02/F02"  # Sostituisci con il tuo percorso
+cartella = "C:/Users/gioel/Desktop/patient_GAN_vad/patient_F02/F02"  
 
 # Ciclo su tutti i file nella cartella
 for filename in os.listdir(cartella):
