@@ -9,8 +9,6 @@ from utils_gan import PairedMelSpectrogramDataset
 from DCGAN_dys_V2 import DysarthricGAN
 from train_Audio_Q import train_dcgan
 from torch.utils.tensorboard import SummaryWriter
-# from torchsummary import summary
-# from DCGAN_dys import Generator
 
 
 
@@ -55,46 +53,24 @@ def main():
     generator = torch.Generator().manual_seed(42)
     train_dataset = random_split(dataset, [train_size], generator=generator)[0]
 
-    ########per salvare train e val e sapere quali parole stanno in uno o nell'altro #############
+    #per salvare 
     train_indices = train_dataset.indices
-
     train_folders = []
-
     for idx in train_indices:
         sano_path, dis_path, sano_in_path = dataset.pairs[idx]
         folder_name = sano_path.parent.name
         train_folders.append(folder_name)
-
-
-    # Rimuovo eventuali duplicati (per sicurezza, anche se non ce ne saranno)
+    # Rimuovo eventuali duplicati (per sicurezza)
     train_folders = sorted(set(train_folders))
-
     train_file = os.path.join(result_path, "train_folders.txt")
-
-
     # Salvataggio in file
     with open(train_file, "w") as f:
         for name in train_folders:
             f.write(name + "\n")
-
-
-    print("✔ Salvate le cartelle in train_folders.txt e val_folders.txt") 
+    print(" Salvate le cartelle in train_folders.txt") 
 
     # definizione dei dataloaders
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)    
-
-    # ex_input = os.path.join(result_path, "example_inputs_cleese")
-    # os.makedirs(ex_input, exist_ok=True)
-    # for i, (s, d, _) in enumerate(val_loader):
-    #     if i >= 5:
-    #         break
-    #     torch.save(s.squeeze(0), os.path.join(ex_input, f"sano_input_tensor_{i}.pth"))
-    #     torch.save(d.squeeze(0), os.path.join(ex_input, f"dis_input_tensor{i}.pth"))
-    
-    # sys.exit()
-
-    # Training with validation
-    logging.info("\nTraining with validation")
 
     dc_gan = DysarthricGAN(in_channels=in_channels, device=device, residual_mode='sum', dropout_p=dropout_p)
     netG, netD = dc_gan.get_models()
@@ -128,12 +104,9 @@ def main():
         lambda_l1=lambda_l1,
         lambda_sc=lambda_sc,
         lambda_mr=lambda_mr,
-        # lambda_fm=lambda_fm,
-        # lambda_stft=lambda_stft,
         result_path=result_path,
         num_epochs=num_epochs,
         update_d_every=update_d_every,
-        # grad_clip=grad_clip
         writer=writer
     )
 
@@ -141,7 +114,7 @@ def main():
         f"[Best_epoch: {epoch_d_all} | distance: {best_d_all:.4f} | diff: {diff_best_d_all:.4f}"
     )
 
-     # === Log locale nel trial ===
+     # Log locale nel trial 
     with open(os.path.join(result_path, "result_log.txt"), "w") as f:
         f.write(log_line)   
 
