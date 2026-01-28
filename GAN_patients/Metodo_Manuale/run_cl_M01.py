@@ -6,7 +6,7 @@ import logging
 import pandas as pd
 from torch.utils.data import DataLoader, random_split
 from utils_gan import PairedMelSpectrogramDataset
-from DCGAN_dys_V2 import DysarthricGAN
+from DCGAN_dys import DysarthricGAN
 from train_Audio_Q import train_dcgan
 from torch.utils.tensorboard import SummaryWriter
 
