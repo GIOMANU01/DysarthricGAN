@@ -6,10 +6,10 @@ import logging
 import pandas as pd
 from torch.utils.data import DataLoader, random_split
 from utils_gan import PairedMelSpectrogramDataset
-from DCGAN_dys_V2 import DysarthricGAN
+from DCGAN_dys import DysarthricGAN
 from train_op import train_dcgan
 from torchsummary import summary
-from DCGAN_dys_V2 import Generator
+from DCGAN_dys import Generator
 import sys
 import optuna
 from datetime import datetime
@@ -37,6 +37,9 @@ print(f"Using device {device}")
 #Cartella principale per i risultati Optuna 
 result_path = "/home/deepfake/DysarthricGAN/F03/OptunaResultsF03"
 os.makedirs(result_path, exist_ok=True)    
+
+dataset_path = "/home/deepfake/DysarthricGAN/F03/F03_MEL_SPEC"
+dataset = PairedMelSpectrogramDataset(dataset_path)
 
 total_size = len(dataset)
 # Calcola le dimensioni (90/5/5)
