@@ -36,7 +36,10 @@ print(f"Using device {device}")
 
 #Cartella principale per i risultati Optuna
 result_path = "/home/deepfake/DysarthricGAN/M09/OptunaResultsM09"
-os.makedirs(result_path, exist_ok=True)    
+os.makedirs(result_path, exist_ok=True)  
+
+dataset_path = "/home/deepfake/DysarthricGAN/M09/M09_MEL_SPEC"
+dataset = PairedMelSpectrogramDataset(dataset_path)
 
 total_size = len(dataset)
 # Calcola le dimensioni (90/5/5)
