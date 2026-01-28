@@ -1,11 +1,10 @@
 import os
 import pandas as pd
 from pydub import AudioSegment
-from textgrids import TextGrid  # mantieni questo se è il pacchetto che usi
+from textgrids import TextGrid  
 import re
 from difflib import SequenceMatcher
 
-# --- PATHS ---
 folder_init = "C:/Users/gioel/Desktop/patient_GAN/patient_M04"
 folder_dis = os.path.join(folder_init, "M04")
 folder_sano = os.path.join(folder_init, "CM04")
@@ -17,7 +16,7 @@ excel_path = os.path.join("C:/Users/gioel/Desktop", "codici_dysartria", "creazio
 results_excel = os.path.join(folder_init, "risultati_MFA.xlsx")
 failed_excel_path = os.path.join(folder_init, "file_non_creati.xlsx")
 
-#le cartelle di output esistano
+
 os.makedirs(output_dis, exist_ok=True)
 os.makedirs(output_sano, exist_ok=True)
 os.makedirs(aligned_dis, exist_ok=True)
@@ -28,7 +27,6 @@ acoustic_model = "english_mfa"
 dictionary_model = "english_mfa"
 
 
-#Leggi Excel
 df = pd.read_excel(excel_path)
 
 #Crea file .lab per MFA
@@ -41,25 +39,25 @@ for _, row in df.iterrows():
             f.write(word)
 
 #Allinea con MFA
-print("🔹 Allineamento parlato sano...")
+print("Allineamento parlato sano...")
 os.system(f'mfa align "{folder_sano}" {acoustic_model} {dictionary_model} "{aligned_sano}" --skip-quality-check')
 
-print("🔹 Allineamento parlato disartrico...")
+print("Allineamento parlato disartrico...")
 os.system(f'mfa align "{folder_dis}" {acoustic_model} {dictionary_model} "{aligned_dis}" --skip-quality-check')
 
-#Processamento TextGrid -> trimmed
+
 results = []
 failed_rows = []  # lista di dizionari: FILE NAME, WORD, SET, REASON
-missing_words = [] #lista parole che mfa non riconosce o non ha nell dizionario
+missing_words = [] # lista parole che mfa non riconosce o non ha nell dizionario
 
 
 
 def normalize_word(w):
-    """Rimuove caratteri non alfabetici e converte in minuscolo."""
+    #Rimuove caratteri non alfabetici e converte in minuscolo
     return re.sub(r"[^a-z]", "", w.lower())
 
 def similarity(a, b):
-    """Calcola la similarità tra due stringhe (0–1)."""
+    #Calcola la similarità tra due stringhe (0–1)
     return SequenceMatcher(None, a, b).ratio()
 
 def process_alignment(wav_folder, aligned_folder, trimmed_folder, tipo):
@@ -72,7 +70,7 @@ def process_alignment(wav_folder, aligned_folder, trimmed_folder, tipo):
         wav_path = os.path.join(wav_folder, f"{codice}.wav")
         out_path = os.path.join(trimmed_folder, f"{codice}.wav")
 
-        # --- controlli preliminari ---
+        # controlli preliminari
         if not os.path.exists(tg_path):
             failed_rows.append({"FILE NAME": codice, "WORD": parola, "SET": tipo, "REASON": "TextGrid mancante"})
             continue
@@ -80,14 +78,14 @@ def process_alignment(wav_folder, aligned_folder, trimmed_folder, tipo):
             failed_rows.append({"FILE NAME": codice, "WORD": parola, "SET": tipo, "REASON": "WAV mancante"})
             continue
 
-        # --- leggi TextGrid ---
+        # leggi TextGrid 
         try:
             tg = TextGrid(tg_path)
         except Exception as e:
             failed_rows.append({"FILE NAME": codice, "WORD": parola, "SET": tipo, "REASON": f"Errore lettura TextGrid: {e}"})
             continue
 
-        # --- trova tier 'word' ---
+        # trova tier 'word' 
         try:
             tier_names = list(tg.keys())
         except Exception:
@@ -103,7 +101,7 @@ def process_alignment(wav_folder, aligned_folder, trimmed_folder, tipo):
 
         words_tier = tg[words_tier_name]
 
-        # --- cerca parola ---
+        # cerca parola 
         trovato = False
         parola_norm = normalize_word(parola)
         best_match = ("", 0.0)
@@ -125,7 +123,7 @@ def process_alignment(wav_folder, aligned_folder, trimmed_folder, tipo):
                 best_match = (text, sim)
                 best_interval = interval
 
-        # --- se trovato o match più simile ---
+        # se trovato o match più simile 
         if best_interval:
             start = float(best_interval.xmin)
             end = float(best_interval.xmax)
@@ -167,11 +165,11 @@ def process_alignment(wav_folder, aligned_folder, trimmed_folder, tipo):
         else:
             failed_rows.append({"FILE NAME": codice, "WORD": parola, "SET": tipo, "REASON": "Parola non trovata nel TextGrid"})
 
-# --- esecuzione ---
+# esecuzione
 process_alignment(folder_dis, aligned_dis, output_dis, "disartrico")
 process_alignment(folder_sano, aligned_sano, output_sano, "sano")
 
-# --- salva risultati ---
+# salva risultati
 df_results = pd.DataFrame(results)
 if not df_results.empty:
     df_final = df_results.pivot_table(index=["FILE NAME", "WORD"], aggfunc="first").reset_index()
@@ -181,11 +179,11 @@ if not df_results.empty:
         df_final["differenza"] = pd.NA
     df_final.to_excel(results_excel, index=False)
 
-# --- salva parole non trovate o approssimate ---
+# salva parole non trovate o approssimate 
 if failed_rows:
     failed_df = pd.DataFrame(failed_rows).drop_duplicates()
     failed_df.to_excel(failed_excel_path, index=False)
 
-print(f"✅ WAV tagliati salvati in '{output_dis}' e '{output_sano}'")
-print(f"✅ Risultati Excel: {results_excel}")
-print(f"✅ Parole non trovate o approssimate: {failed_excel_path}")
+print(f"WAV tagliati salvati in '{output_dis}' e '{output_sano}'")
+print(f"Risultati Excel: {results_excel}")
+print(f"Parole non trovate o approssimate: {failed_excel_path}")
