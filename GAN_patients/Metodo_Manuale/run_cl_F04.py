@@ -6,7 +6,7 @@ import logging
 import pandas as pd
 from torch.utils.data import DataLoader, random_split
 from utils_gan import PairedMelSpectrogramDataset
-from DCGAN_dys_V2 import DysarthricGAN
+from DCGAN_dys import DysarthricGAN
 from train_Audio_Q import train_dcgan
 from torch.utils.tensorboard import SummaryWriter
 
@@ -36,13 +36,10 @@ def main():
     lambda_l1 = 5
     lambda_sc = 2
     lambda_mr = 5
-    # lambda_fm = 10.0
-    # grad_clip = 20.0
-    # lambda_stft = 3.0
     result_path = "/home/deepfake/DysarthricGAN/F04/results_audio"
     os.makedirs(result_path, exist_ok=True)
 
-    # === Dataset ===
+    # Dataset 
     dataset = PairedMelSpectrogramDataset("/home/deepfake/DysarthricGAN/F04/F04_MEL_SPEC")
     
     # Mostra quante coppie ci sono
