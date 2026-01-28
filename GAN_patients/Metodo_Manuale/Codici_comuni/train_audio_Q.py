@@ -7,7 +7,7 @@ from scipy.fftpack import dct
 from torch.optim.lr_scheduler import ReduceLROnPlateau, CosineAnnealingLR
 import pandas as pd
 import torch.nn.functional as F
-import soundfile as sf  # Assicurati di averlo installato: pip install soundfile
+import soundfile as sf  
 from losses import LogSpectralConvLoss, LogSTFTMagnitudeLoss, MRSTFTLoss_Mel
 
 
@@ -17,7 +17,7 @@ from losses import LogSpectralConvLoss, LogSTFTMagnitudeLoss, MRSTFTLoss_Mel
 TARGET_MFCC_DIM = 12 # Da 80 a 12 coefficienti
 TARGET_TIME_LENGTH = 89 
 
-# --- Parametri WaveGlow ---
+# Parametri WaveGlow
 SR_ORIG = 22050
 MU_SPK = -9.1232
 SIGMA_SPK = 3.5412
