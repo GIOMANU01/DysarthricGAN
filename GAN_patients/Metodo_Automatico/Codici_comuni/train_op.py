@@ -49,21 +49,21 @@ def reduce_time_dimension(mfcc_tensor):
     Risultato: [89, 12] (trasposto per la PCA).
     """
     
-    # 1. Prepara i dati: Rimuovi la dimensione batch e converti in NumPy
+    # Prepara i dati: Rimuovi la dimensione batch e converti in NumPy
     # data: [Features (12), Time (L)]
     data = mfcc_tensor.squeeze(0).numpy()
     
     num_features, L = data.shape
     
-    # 2. Inizializza l'array risultante [Features (12), TARGET_TIME_LENGTH (89)]
+    # Inizializza l'array risultante [Features (12), TARGET_TIME_LENGTH (89)]
     reduced_data = np.zeros((num_features, TARGET_TIME_LENGTH))
     
-    # 3. Calcola i confini dei 89 "bin" (finestre temporali)
+    # Calcola i confini dei 89 "bin" (finestre temporali)
     # np.linspace crea 90 punti uniformemente distribuiti tra 0 e L
     # Questo definisce gli 89 intervalli (finestre)
     bin_edges = np.linspace(0, L, TARGET_TIME_LENGTH + 1)
     
-    # 4. Loop per calcolare la media in ciascuno degli 89 bin
+    # Loop per calcolare la media in ciascuno degli 89 bin
     for i in range(TARGET_TIME_LENGTH):
         # Definisce l'inizio e la fine del bin corrente (arrotondati all'intero più vicino)
         start = int(np.round(bin_edges[i]))
@@ -80,9 +80,6 @@ def reduce_time_dimension(mfcc_tensor):
             # Se la finestra è vuota (es. se L è molto piccolo) usa il valore precedente o zero
             reduced_data[:, i] = reduced_data[:, i-1] if i > 0 else 0
             
-    # 5. **TRASPOSIZIONE FONDAMENTALE PER LA PCA:**
-    # Trasforma da [Feature, Frame] a [Frame, Feature]
-    # Risultato: [89, 12] (89 esempi/righe, 12 feature/colonne)
     return reduced_data.T
 
 # funzione di utility
@@ -158,7 +155,6 @@ def train_dcgan(
 
 
         for i, (batch_sano, batch_disartrico, _) in enumerate(train_loader):
-            # step_count += 1
             batch_sano = batch_sano.to(device)
             batch_disartrico = batch_disartrico.to(device)
             batch_size = batch_sano.size(0)
@@ -167,26 +163,22 @@ def train_dcgan(
 
             # DISCRIMINATORE
             label_real = torch.full((batch_size,), 0.9, dtype=torch.float, device=device)  # label smoothing
-            label_fake = torch.full((batch_size,), 0.1, dtype=torch.float, device=device)
-
-            # out_real = netD(batch_disartrico)
             out_real = netD(torch.cat((batch_sano, batch_disartrico), dim=1))
             out_real = out_real.view(-1) # i disartrici reali vengono passati al D
             loss_real = criterion(out_real, label_real) # calcolo loss dei disartrici reali con la label (1)
-
+            
+            label_fake = torch.full((batch_size,), 0.1, dtype=torch.float, device=device)
             fake_data = netG(batch_sano) # i sani vengono passati al G per generare i disartrici fake
-            # out_fake = netD(fake_data.detach())
             out_fake = netD(torch.cat((batch_sano, fake_data.detach()), dim=1))
             out_fake = out_fake.view(-1) # i disartrici fake generati vengono passati al D
             loss_fake = criterion(out_fake, label_fake) # calcolo loss dei disartrici fake con la label (0)
 
-            # Accumula loss (non dividere arbitrariamente)
+            # Accumula loss 
             loss_D_batch = (loss_real + loss_fake) * 0.5
 
-            if i % update_d_every == 0: # update discriminator every "update_d_every" iterations
+            if i % update_d_every == 0: # update discriminatore ogni  "update_d_every" iterationi
                 loss_D_batch.backward()
-                # if grad_clip is not None:
-                #     torch.nn.utils.clip_grad_norm_(netD.parameters(), grad_clip)
+      
                 optimizerD.step()
 
             running_loss_D += loss_D_batch.item()
@@ -196,7 +188,6 @@ def train_dcgan(
             # GENERATORE
             optimizerG.zero_grad()
             label_gen = torch.full((batch_size,), 0.9, dtype=torch.float, device=device) 
-            # out_gen = netD(fake_data)
             out_gen = netD(torch.cat((batch_sano, fake_data), dim=1))
             out_gen = out_gen.view(-1) # passa i disartrici fake generati al D
             adv_loss = criterion(out_gen, label_gen) #applica la label (1) per ingannare il D
@@ -216,7 +207,6 @@ def train_dcgan(
 
             running_loss_G += loss_G.item()
             G_bce_loss += adv_loss.item()
-            # G_fm_loss += fm_loss
             G_l1_loss += l1_loss.item()
             G_sc_loss += sc_loss.item()
 
@@ -235,12 +225,12 @@ def train_dcgan(
         writer.add_scalar('G_L1_LOSS',            (G_l1_loss/len(train_loader)), epoch)
         writer.add_scalar('G_SC_LOSS',            (G_sc_loss/len(train_loader)), epoch)
 
-        current_lr_d = optimizerD.param_groups[0]['lr']  # prendi il learning rate del primo param_group
+        current_lr_d = optimizerD.param_groups[0]['lr']  
         writer.add_scalar('Learning_Rate_D', current_lr_d, epoch)
-        current_lr_g = optimizerG.param_groups[0]['lr']  # prendi il learning rate del primo param_group   
+        current_lr_g = optimizerG.param_groups[0]['lr']     
         writer.add_scalar('Learning_Rate_G', current_lr_g, epoch)
 
-        # === VALIDAZIONE ===
+        # VALIDAZIONE
         val_loss, val_mel_loss, val_adv_loss, val_l1_loss, val_fm_loss, total_val_loss  = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
         
         output_0 = [] #per i sani input
@@ -274,7 +264,7 @@ def train_dcgan(
                         l1_loss = (torch.abs(fake_val - val_dis) * mask).sum() / (mask.sum() + 1e-8)
                     val_l1_loss += l1_loss.item()
 
-                    # === TOTAL ===
+                    # TOTAL 
                     total_val_loss = adv_loss + lambda_sc * sc_loss
                     val_loss += total_val_loss.item()
 
@@ -355,7 +345,7 @@ def train_dcgan(
         distance_native = np.linalg.norm(V_native)
 
         diff = abs(distance_from_input - distance_native)
-         # === LOGGING TENSORBOARD DELLE METRICHE DEI CENTROIDI ===
+         # LOGGING TENSORBOARD DELLE METRICHE DEI CENTROIDI
         writer.add_scalar('Validation_Metrics/d1 (gen-dis)', distance_to_target, epoch) # Base
         writer.add_scalar('Validation_Metrics/Centroid_Isosceles_Diff', diff, epoch)
         writer.add_scalar('Validation_Metrics/d2 (gen-sano)', distance_from_input, epoch)
@@ -376,8 +366,7 @@ def train_dcgan(
             torch.save(netG.state_dict(), best_d_all_path)
             print(f"best distance gen salvato: {best_d_all_path}")
        
-
-        #writer.flush()  
+ 
         if epoch == 0:
             fixed_sano, fixed_disartrico, _ = next(iter(val_loader))
             fixed_sano = fixed_sano.float().to(device)
@@ -403,8 +392,7 @@ def train_dcgan(
             print(f'>> Generated MELSpec saved')
 
         print(f"[Epoch {epoch+1}/{num_epochs}] Loss_D: {avg_loss_D:.4f} | Loss_G: {avg_loss_G:.4f} | Val_Loss: {val_loss:.4f}  | Dist_Target: {distance_to_target:.4f} | Diff_Isoscele: {diff:.4f} ")
-        # if early_stop:                
-        #     break
+
         
     writer.close()    
 
